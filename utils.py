@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
+from matplotlib import pyplot as plt
 
 # Different penalty matrices for a given model
 
@@ -140,3 +141,55 @@ def log_grad(model, data, cov_inv, A=None):
     ret = minimize(minfun, x0=1.0)
 
     return grad * ret.x[0]
+
+def model_ratio_plot(model, data, cov, A=None, norm=None, bins=None, data_label="data", model_label=None):
+    
+    if norm is None:
+        norm = model
+    
+    if bins is None:
+        bins = np.arange(len(model) + 1)
+    
+    x = (bins[1:] + bins[:-1]) / 2
+    xerr = (bins[1:] - bins[:-1]) / 2
+    
+    # data / MC
+    ys = data / norm
+    yerrs = np.sqrt(np.diag(cov)) / norm
+    plt.errorbar(
+        x,
+        ys,
+        yerr=yerrs,
+        xerr=xerr,
+        label=data_label,
+        linewidth=2,
+        linestyle="",
+        capsize=4,
+        alpha=0.5,
+    )
+    
+    cov_inv = np.linalg.inv(cov)
+
+    chi = chi2(model, data, cov_inv, A)
+    grad = scaled_grad(norm, model, data, cov_inv, A)
+    chi_grad = chi2(model * (grad + 1.0), model, cov_inv, A)
+    print(np.sum(grad), chi_grad)
+    ys = model / norm
+    # plt.stairs(ys, bins, baseline=None, color="C1")
+    if model_label is None:
+        model_label = f"model: {chi:.1f} / {len(model)}"
+    plt.axhline(1.0, color="C1", label=model_label)
+    for ax, ay, dy in zip(x, ys, grad):
+        ar = plt.arrow(
+            ax,
+            ay,
+            0,
+            dy,
+            head_width=0.5,
+            length_includes_head=True,
+            head_length=np.abs(dy),
+            color="C1",
+        )
+    ar.set_label(f"local gradient: {chi_grad:.1f} / {len(model)}")
+
+    plt.legend()

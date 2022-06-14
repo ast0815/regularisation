@@ -172,20 +172,21 @@ def model_ratio_plot(model, data, cov, A=None, norm=None, bins=None, data_label=
 
     chi = chi2(model, data, cov_inv, A)
     grad = scaled_grad(norm, model, data, cov_inv, A)
-    chi_grad = chi2(model * (grad + 1.0), model, cov_inv, A)
+    chi_grad = chi2(model * (grad + 1.0), data, cov_inv, A)
     print(np.sum(grad), chi_grad)
     ys = model / norm
     # plt.stairs(ys, bins, baseline=None, color="C1")
     if model_label is None:
         model_label = f"model: {chi:.1f} / {len(model)}"
     plt.axhline(1.0, color="C1", label=model_label)
+    w = np.min(xerr) * 1.6 # Make all arrows same width
     for ax, ay, dy in zip(x, ys, grad):
         ar = plt.arrow(
             ax,
             ay,
             0,
             dy,
-            head_width=0.5,
+            head_width=w,
             length_includes_head=True,
             head_length=np.abs(dy),
             color="C1",

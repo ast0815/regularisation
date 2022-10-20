@@ -5,6 +5,13 @@ from matplotlib import pyplot as plt
 # Different penalty matrices for a given model
 
 
+def Q0(model, bin_pairs=None):
+    # Penalise total bin values (L2 norm)
+    # chi = sum_i( x_i^2 )
+    N = len(model)
+    C = np.eye(N, dtype=float)
+    return C
+
 def Q1(model, bin_pairs=None):
     # Penalise bin diffrences
     # chi = sum_i( (x_i - x_{i+1})^2 )
@@ -90,7 +97,7 @@ def xsec_grad(model, data, cov_inv, A=None):
     if A is None:
         A = np.eye(len(model))
 
-    grad = A.T @ cov_inv @ (data - model)
+    grad = A.T @ cov_inv @ (data - A @ model)
 
     def minfun(x):
         y = A @ (model + grad * x) - data
@@ -111,7 +118,7 @@ def scaled_grad(scale_model, model, data, cov_inv, A=None):
     if A is None:
         A = np.eye(len(model))
 
-    grad = scale_model * (A.T @ cov_inv @ (data - model))
+    grad = scale_model * (A.T @ cov_inv @ (data - A @ model))
 
     def minfun(x):
         y = A @ (model + scale_model * grad * x) - data
@@ -132,7 +139,7 @@ def log_grad(model, data, cov_inv, A=None):
     if A is None:
         A = np.eye(len(model))
 
-    grad = model * (A.T @ cov_inv @ (data - model))
+    grad = model * (A.T @ cov_inv @ (data - A @ model))
 
     def minfun(x):
         y = A @ (model * np.exp(grad * x)) - data
@@ -175,10 +182,10 @@ def model_ratio_plot(model, data, cov, A=None, norm=None, bins=None, data_label=
     chi_grad = chi2(model * (grad + 1.0), data, cov_inv, A)
     print(np.sum(grad), chi_grad)
     ys = model / norm
-    # plt.stairs(ys, bins, baseline=None, color="C1")
     if model_label is None:
         model_label = f"model: {chi:.1f} / {len(model)}"
-    plt.axhline(1.0, color="C1", label=model_label)
+    plt.stairs(ys, bins, baseline=None, color="C1", label=model_label)
+    #plt.axhline(1.0, color="C1", label=model_label)
     w = np.min(xerr) * 1.6 # Make all arrows same width
     for ax, ay, dy in zip(x, ys, grad):
         ar = plt.arrow(
@@ -194,3 +201,5 @@ def model_ratio_plot(model, data, cov, A=None, norm=None, bins=None, data_label=
     ar.set_label(f"local gradient: {chi_grad:.1f} / {len(model)}")
 
     plt.legend()
+    
+    return grad
